@@ -3,7 +3,7 @@ name: Deploy Blog
 on:
   push:
     branches:
-      - master  # 每次 push 到 master 时自动部署
+      - master
 
 jobs:
   deploy:
@@ -13,14 +13,23 @@ jobs:
       - name: 📥 拉取仓库代码
         uses: actions/checkout@v3
 
-      - name: 🔐 设置 SSH 私钥
-        env:
-          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+      - name: 🔨 安装 Hexo 并生成静态文件
+        run: |
+          npm install -g hexo-cli
+          npm install
+          hexo clean && hexo generate
+
+      - name: 🔐 设置 SSH 密钥
         run: |
           mkdir -p ~/.ssh
-          echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      - name: 🚀 登录远程服务器并执行部署
-        run: ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.SERVER_HOST }} 'cd ~/hexo-blog && ./deploy.sh'
+      - name: 📤 上传文件到服务器
+        run: |
+          scp -r public/ deploy.sh Dockerfile ubuntu@${{ secrets.SERVER_HOST }}:~/hexo-blog/
+
+      - name: 🚀 执行远程部署脚本
+        run: |
+          ssh ubuntu@${{ secrets.SERVER_HOST }} 'cd ~/hexo-blog && chmod +x deploy.sh && ./deploy.sh'
