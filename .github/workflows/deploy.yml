@@ -1,42 +1,25 @@
-name: Hexo CI/CD
+name: Deploy Blog
 
 on:
   push:
     branches:
-      - master
+      - master  # 每次 push 到 master 时自动部署
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: 📥 拉取仓库代码
+        uses: actions/checkout@v3
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 18
+      - name: 🔐 设置 SSH 私钥
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Install dependencies
-      run: |
-        npm install -g hexo-cli
-        npm install
-
-    - name: Generate static files
-      run: hexo generate
-
-    - name: Setup SSH
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
-        chmod 600 ~/.ssh/id_ed25519
-        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
-
-    - name: Upload via SCP
-      run: |
-        scp -r public/* ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/ubuntu/hexo-blog/public/
-
-    - name: Remote Deploy
-      run: |
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ~/hexo-blog && docker restart blog"
+      - name: 🚀 登录远程服务器并执行部署
+        run: |
+          ssh ubuntu@${{ secrets.SERVER_HOST }} 'cd ~/hexo-blog && ./deploy.sh'
