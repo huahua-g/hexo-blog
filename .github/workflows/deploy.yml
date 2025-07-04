@@ -14,12 +14,13 @@ jobs:
         uses: actions/checkout@v3
 
       - name: 🔐 设置 SSH 私钥
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
+          echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
       - name: 🚀 登录远程服务器并执行部署
-        run: |
-          ssh ubuntu@${{ secrets.SERVER_HOST }} 'cd ~/hexo-blog && ./deploy.sh'
+        run: ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.SERVER_HOST }} 'cd ~/hexo-blog && ./deploy.sh'
